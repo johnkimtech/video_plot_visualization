@@ -103,6 +103,9 @@ def draw_results(
 
         # write frame to output file
         out.write(frame)
+        cv2.imshow('frame', frame)
+        if cv2.waitKey(1) == ord("q"):
+            break
         frame_count += 1
 
     # Release video capture and writer
@@ -138,7 +141,7 @@ if __name__ == "__main__":
         "aspect_ratio": 0.5,  # controls the aspect ratio of the graph to be more rectangular or square
         "margin_left": 10,  # margin of the graph to the left corner of the input video
         "margin_top": 0,  # margin of the graph from the top corner of the input video
-        "slow_down": 2,  # how slow the output compares to the original video, e.g. value of 2 will slow it down by 2x times, thus making it 2x times longer in duration
+        "slow_down": 1,  # how slow the output compares to the original video, e.g. value of 2 will slow it down by 2x times, thus making it 2x times longer in duration
     }
 
     draw_results(

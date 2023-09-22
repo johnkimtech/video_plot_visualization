@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
     configs = {
     "axes_linewidth": 3,
-    "slow_down": 5,  # Customize output video frame rate (e.g., slow down by a factor of 2)
+    "slow_down": 2,  # Customize output video frame rate (e.g., slow down by a factor of 2)
     "subplot_width": 0.3,  # Width of each subplot
     "subplot_height": 0.15,  # Height of each subplot
     "margin_left": 50,  # Left margin for subplots
