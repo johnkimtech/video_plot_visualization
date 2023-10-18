@@ -156,7 +156,6 @@ if __name__ == "__main__":
             "red",
             "red",
         ],  # dont use black, it will be transparent
-        "column_names": None,
         "column_names": [
             "[LEFT] Heel Strike",
             "[LEFT] Toe Off",
