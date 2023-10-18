@@ -5,27 +5,37 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 import pandas as pd
 import time
+import os
 
 
 def draw_results(
-    input_video_path,
+    input_folder_path,
     event_csv_path,
     output_video_path,
     configs,
     n_frames_limit=np.inf,
     index_col="frame",
 ):
-    """ """
     # Load CSV data
     df = pd.read_csv(event_csv_path, index_col=index_col)
 
-    # Process the video
-    cap = cv2.VideoCapture(input_video_path)
+    # Get list of image files in the input folder
+    img_files = sorted(
+        [
+            f
+            for f in os.listdir(input_folder_path)
+            if os.path.isfile(os.path.join(input_folder_path, f))
+            and f.startswith("img_")
+        ]
+    )
 
-    N_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-    org_frame_rate = int(cap.get(cv2.CAP_PROP_FPS))
-    v_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    v_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    # Process the images
+    img_idx = 0
+    N_frames = len(img_files)
+    org_frame_rate = 30  # Assuming a default frame rate of 30 fps for images
+    v_height, v_width, _ = cv2.imread(
+        os.path.join(input_folder_path, img_files[0])
+    ).shape
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 
     # plot configs
@@ -52,29 +62,49 @@ def draw_results(
 
     first_frame_idx = min(df.index)
     frame_count = 0
-    col_names = configs["column_names"] or list(df.columns)
-    while True:
+    gait_events_list = configs["gait_events_list"] or ["L_HS", "L_TO", "R_HS", "R_TO"]
+    col_names = configs["column_names"] or gait_events_list
+    while img_idx < N_frames:
         if frame_count > n_frames_limit:
             break
-        ret, frame = cap.read()
-        if not ret:
-            break
 
-        frame_idx = int(cap.get(1)) - 1  # Get current frame index
+        img_path = os.path.join(input_folder_path, img_files[img_idx])
+        frame = cv2.imread(img_path)
+
+        frame_idx = int(
+            os.path.splitext(img_files[img_idx].split("_")[1])[0]
+        )  # Get current frame index
         if frame_idx in df.index:
             start_idx = max(first_frame_idx, frame_idx - configs["x_range"])
             da = df[start_idx:frame_idx]
-            gait_events_list = da.columns
 
             for i, gait_event in enumerate(gait_events_list):
                 # draw graph
                 axs[i].clear()
                 axs[i].xaxis.set_major_locator(plt.MaxNLocator(4))
+                # plot prediction
+                pred_col, target_col = f"pred_{gait_event}", f"target_{gait_event}"
                 axs[i].plot(
-                    da.index, da[gait_event], configs["event_colors"][i], linewidth=4.0
+                    da.index,
+                    da[pred_col],
+                    color=configs["pred_colors"][i],
+                    linewidth=4.0,
+                    # linestyle="-",
+                    label="prediction",
                 )
+                # plot target
+                axs[i].plot(
+                    da.index,
+                    da[target_col],
+                    color=configs["target_colors"][i],
+                    linewidth=4.0,
+                    # linestyle=":",
+                    label="target",
+                )
+
                 axs[i].set_xlim(start_idx, max(configs["x_range"], frame_idx))
                 axs[i].set_ylim(0, 1.0)
+                axs[i].legend()
                 axs[i].set_title(col_names[i])
 
             # put graph into buffer
@@ -103,21 +133,30 @@ def draw_results(
 
         # write frame to output file
         out.write(frame)
-        cv2.imshow("frame", frame)
-        if cv2.waitKey(1) == ord("q"):
-            break
         frame_count += 1
+        img_idx += 1
 
-    # Release video capture and writer
-    cap.release()
+    # Release video writer
     out.release()
 
 
 if __name__ == "__main__":
     tic = time.perf_counter()
     configs = {
-        "event_colors": ["white", "red", "cyan", "yellow"],  # color for each subgraph
-        # "event_colors": ['red', 'green', 'yellow', 'white'],  # color for each subgraph
+        "gait_events_list": ["L_HS", "L_TO", "R_HS", "R_TO"],
+        "pred_colors": [
+            "white",
+            "white",
+            "white",
+            "white",
+        ],  # dont use black, it will be transparent
+        "target_colors": [
+            "red",
+            "red",
+            "red",
+            "red",
+        ],  # dont use black, it will be transparent
+        "column_names": None,
         "column_names": [
             "[LEFT] Heel Strike",
             "[LEFT] Toe Off",
@@ -141,12 +180,12 @@ if __name__ == "__main__":
         "aspect_ratio": 0.5,  # controls the aspect ratio of the graph to be more rectangular or square
         "margin_left": 10,  # margin of the graph to the left corner of the input video
         "margin_top": 0,  # margin of the graph from the top corner of the input video
-        "slow_down": 1,  # how slow the output compares to the original video, e.g. value of 2 will slow it down by 2x times, thus making it 2x times longer in duration
+        "slow_down": 2,  # how slow the output compares to the original video, e.g. value of 2 will slow it down by 2x times, thus making it 2x times longer in duration
     }
 
     draw_results(
-        input_video_path="14_VYI_MX.MP4",
-        event_csv_path="14_VYI_MX.csv",
+        input_folder_path="data/0022128380/0022128380_1",
+        event_csv_path="data/temporal_parameters_estimation/output_22128380_1.csv",
         output_video_path="A.mp4",
         configs=configs,
         # n_frames_limit=200,  # comment out to process the whole video

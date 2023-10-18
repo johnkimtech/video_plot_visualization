@@ -102,3 +102,8 @@ ENV/
 *mp4
 *MP4
 *csv
+*jpg
+*png
+*avi
+data
+.VSCode*
